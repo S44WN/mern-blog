@@ -22,13 +22,12 @@ mongoose.connect(process.env.DB_LOCATION, {
 });
 
 const formatDataToSend = (user) => {
-  const accessToken = jwt.sign(
+  const access_token = jwt.sign(
     { id: user._id },
-    process.env.SECRET_ACCESS_KEY,
-    { expiresIn: "1d" }
+    process.env.SECRET_ACCESS_KEY
   );
   return {
-    accessToken,
+    access_token,
     profile_img: user.personal_info.profile_img,
     fullname: user.personal_info.fullname,
     username: user.personal_info.username,
