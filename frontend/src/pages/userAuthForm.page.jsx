@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import InputBox from "../components/input.component";
 import googleIcon from "../imgs/google.png";
 import { Link } from "react-router-dom";
@@ -7,9 +6,6 @@ import { Toaster, toast } from "react-hot-toast";
 import axios from "axios";
 
 const UserAuthForm = ({ type }) => {
-  // Ref for the form element to access the form data
-  const authForm = useRef();
-
   const userAuthThroughServer = (serverRoute, formData) => {
     axios
       .post(import.meta.env.VITE_SERVER_DOMAIN + serverRoute, formData)
@@ -31,7 +27,7 @@ const UserAuthForm = ({ type }) => {
     let passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,20}$/; // regex for password
 
     //formdata
-    let form = new FormData(authForm.current);
+    let form = new FormData(formElement);
 
     let formData = {};
 
@@ -69,7 +65,7 @@ const UserAuthForm = ({ type }) => {
     <AnimationWrapper keyValue={type}>
       <section className="h-cover flex items-center justify-center">
         <Toaster />
-        <form ref={authForm} className="w-[80%] max-w-[400px] ">
+        <form id="formElement" className="w-[80%] max-w-[400px] ">
           <h1 className="text-4xl font-gelasio capitalize text-center mb-24">
             {type === "sign-in" ? "Welcome back" : "Join us today"}
           </h1>
