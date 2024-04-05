@@ -2,6 +2,8 @@ import express from "express";
 import mongoose from "mongoose";
 import "dotenv/config";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import cors from "cors";
 
 // Schema
 import User from "./Schema/User.js";
@@ -13,13 +15,19 @@ let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for e
 let passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,20}$/; // regex for password
 
 server.use(express.json()); // for parsing application/json
+server.use(cors());
 
 mongoose.connect(process.env.DB_LOCATION, {
   autoIndex: true, // Don't build indexes
 });
 
 const formatDataToSend = (user) => {
+  const access_token = jwt.sign(
+    { id: user._id },
+    process.env.SECRET_ACCESS_KEY
+  );
   return {
+    access_token,
     profile_img: user.personal_info.profile_img,
     fullname: user.personal_info.fullname,
     username: user.personal_info.username,
@@ -95,7 +103,44 @@ server.post("/signup", (req, res) => {
       });
   });
 
+  //   signup
+
   //   return res.status(200).json({ message: "Signup successful" });
+});
+
+// signin
+server.post("/signin", (req, res) => {
+  let { email, password } = req.body;
+
+  User.findOne({ "personal_info.email": email })
+    .then((user) => {
+      console.log(user);
+
+      //1. if user-email is not found
+      if (!user) {
+        return res.status(403).json({ message: "Invalid email" });
+      }
+
+      //2. if user-email is found
+      //3. compare the password
+      bcrypt.compare(password, user.personal_info.password, (err, result) => {
+        // 3.1 if error in comparing password
+        if (err) {
+          return res.status(500).json({ message: "Internal server error" });
+        }
+
+        //3.2 if password is incorrect
+        if (!result) {
+          return res.status(403).json({ message: "Invalid password" });
+        }
+
+        //3.3 if password is correct, send the user document
+        return res.status(200).json(formatDataToSend(user));
+      });
+    })
+    .catch((err) => {
+      return res.status(500).json({ message: err.message });
+    });
 });
 
 server.listen(PORT, () => {
