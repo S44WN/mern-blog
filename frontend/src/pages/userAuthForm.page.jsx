@@ -1,3 +1,4 @@
+import { useContext } from "react";
 import InputBox from "../components/input.component";
 import googleIcon from "../imgs/google.png";
 import { Link, Navigate } from "react-router-dom";
@@ -5,15 +6,9 @@ import AnimationWrapper from "../common/page-animation";
 import { Toaster, toast } from "react-hot-toast";
 import axios from "axios";
 import { storeInSession } from "../common/session";
-import { useContext } from "react";
 import { UserContext } from "../App";
 
 const UserAuthForm = ({ type }) => {
-  // let {
-  //   userAuth: { access_token },
-  //   setUserAuth,
-  // } = useContext(UserContext);
-
   let {
     userAuth: { access_token },
     setUserAuth,
