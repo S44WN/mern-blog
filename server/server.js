@@ -4,12 +4,20 @@ import "dotenv/config";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cors from "cors";
+import admin from "firebase-admin";
+import serviceAccountKey from "./serviceAccountKey.json" assert { type: "json" };
+import { getAuth } from "firebase-admin/auth";
 
 // Schema
 import User from "./Schema/User.js";
 
 const server = express();
 let PORT = process.env.PORT || 3000;
+
+// firebase
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccountKey),
+});
 
 let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for email
 let passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,20}$/; // regex for password
@@ -121,22 +129,93 @@ server.post("/signin", (req, res) => {
         return res.status(403).json({ message: "Invalid email" });
       }
 
-      //2. if user-email is found
-      //3. compare the password
-      bcrypt.compare(password, user.personal_info.password, (err, result) => {
-        // 3.1 if error in comparing password
-        if (err) {
-          return res.status(500).json({ message: "Internal server error" });
-        }
+      if (!user.google_auth) {
+        //2. if user-email is found
+        //3. compare the password
+        bcrypt.compare(password, user.personal_info.password, (err, result) => {
+          // 3.1 if error in comparing password
+          if (err) {
+            return res.status(500).json({ message: "Internal server error" });
+          }
 
-        //3.2 if password is incorrect
-        if (!result) {
-          return res.status(403).json({ message: "Invalid password" });
-        }
+          //3.2 if password is incorrect
+          if (!result) {
+            return res.status(403).json({ message: "Invalid password" });
+          }
 
-        //3.3 if password is correct, send the user document
-        return res.status(200).json(formatDataToSend(user));
-      });
+          //3.3 if password is correct, send the user document
+          return res.status(200).json(formatDataToSend(user));
+        });
+      } else {
+        return res
+          .status(403)
+          .json({
+            message:
+              "This email was signed up with google. Please sign in with google.",
+          });
+      }
+    })
+    .catch((err) => {
+      return res.status(500).json({ message: err.message });
+    });
+});
+
+// google auth
+server.post("/google-auth", async (req, res) => {
+  let { access_token } = req.body;
+
+  //verify the token
+  getAuth()
+    .verifyIdToken(access_token)
+    .then(async (decodedUser) => {
+      let { email, name, picture } = decodedUser;
+
+      picture = picture.replace("s96-c", "s384-c"); //gets better image from google
+
+      let user = await User.findOne({ "personal_info.email": email })
+        .select(
+          "persinal_info.fullname personal_info.username personal_info.profile_img google_auth"
+        )
+        .then((user) => {
+          return user || null;
+        })
+        .catch((err) => {
+          return res.status(500).json({ message: err.message });
+        });
+
+      if (user) {
+        //if user is found in the database
+        if (!user.google_auth) {
+          return res.status(403).json({
+            message:
+              "This email was signed up without google. Please sign in with email and password.",
+          });
+        }
+      } else {
+        // sign up the user
+        let username = await generateUsername(email);
+
+        user = new User({
+          personal_info: {
+            fullname: name,
+            email,
+            username,
+            profile_img: picture,
+          },
+          google_auth: true,
+        });
+
+        await user
+          .save()
+          .then((user) => {
+            user = user;
+          })
+          .catch((err) => {
+            return res.status(500).json({ message: err.message });
+          });
+      }
+
+      return res.status(200).json(formatDataToSend(user));
     })
     .catch((err) => {
       return res.status(500).json({ message: err.message });
