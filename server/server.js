@@ -7,6 +7,8 @@ import cors from "cors";
 import admin from "firebase-admin";
 import serviceAccountKey from "./serviceAccountKey.json" assert { type: "json" };
 import { getAuth } from "firebase-admin/auth";
+import aws from "aws-sdk";
+import { nanoid } from "nanoid";
 
 // Schema
 import User from "./Schema/User.js";
@@ -28,6 +30,31 @@ server.use(cors());
 mongoose.connect(process.env.DB_LOCATION, {
   autoIndex: true, // Don't build indexes
 });
+
+// setting up AWS S3 bucket
+const s3 = new aws.S3({
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
+
+// genrerate upload URL
+
+const generateUploadURL = async (key) => {
+  const date = new Date();
+  const imageName = `${nanoid()}-${date.getTime()}.jpeg`;
+
+  // params for the image
+  const params = {
+    Bucket: process.env.AWS_BUCKET_NAME, // bucket name
+    Key: imageName, // file name
+    Expires: 1000, // time to expire
+    ContentType: "image/jpeg", // file type
+  };
+
+  // get the signed URL
+  return await s3.getSignedUrlPromise("putObject", params);
+};
 
 const formatDataToSend = (user) => {
   const access_token = jwt.sign(
@@ -52,6 +79,19 @@ const generateUsername = async (email) => {
 
   return username;
 };
+
+// upload image to s3 route
+// why use get method for uploading image? - because we are not sending any data to the server, we are just getting the URL to upload the image
+
+server.get("/get-upload-url", async (req, res) => {
+  await generateUploadURL()
+    .then((url) => {
+      res.status(200).json({ uploadURL: url });
+    })
+    .catch((err) => {
+      res.status(500).json({ message: err.message });
+    });
+});
 
 server.post("/signup", (req, res) => {
   //1. getting data from the request
@@ -147,12 +187,10 @@ server.post("/signin", (req, res) => {
           return res.status(200).json(formatDataToSend(user));
         });
       } else {
-        return res
-          .status(403)
-          .json({
-            message:
-              "This email was signed up with google. Please sign in with google.",
-          });
+        return res.status(403).json({
+          message:
+            "This email was signed up with google. Please sign in with google.",
+        });
       }
     })
     .catch((err) => {

@@ -1,8 +1,12 @@
-POST http://localhost:3000/sign 
-Content-Type: application/json
+# POST http://localhost:3000/sign 
+# Content-Type: application/json
 
-{
-    "fullname": "Saawn",
-    "email": "hey@newa.com",
-    "password": "23hj@@FDF"
-}
+# {
+#     "fullname": "Saawn",
+#     "email": "hey@newa.com",
+#     "password": "23hj@@FDF"
+# }
+
+# get upload URL
+
+GET http://localhost:3000/get-upload-url
