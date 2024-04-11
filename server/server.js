@@ -7,6 +7,7 @@ import cors from "cors";
 import admin from "firebase-admin";
 import serviceAccountKey from "./serviceAccountKey.json" assert { type: "json" };
 import { getAuth } from "firebase-admin/auth";
+import aws from "aws-sdk";
 
 // Schema
 import User from "./Schema/User.js";
@@ -27,6 +28,13 @@ server.use(cors());
 
 mongoose.connect(process.env.DB_LOCATION, {
   autoIndex: true, // Don't build indexes
+});
+
+// AWS S3 bucket
+const s3 = new aws.S3({
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });
 
 const formatDataToSend = (user) => {
@@ -147,12 +155,10 @@ server.post("/signin", (req, res) => {
           return res.status(200).json(formatDataToSend(user));
         });
       } else {
-        return res
-          .status(403)
-          .json({
-            message:
-              "This email was signed up with google. Please sign in with google.",
-          });
+        return res.status(403).json({
+          message:
+            "This email was signed up with google. Please sign in with google.",
+        });
       }
     })
     .catch((err) => {
