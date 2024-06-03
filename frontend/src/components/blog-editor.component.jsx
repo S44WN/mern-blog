@@ -64,7 +64,7 @@ const BlogEditor = () => {
                   type="file"
                   accept=".png, .jpg, .jpeg"
                   hidden
-                  onClick={handleBannerUpload}
+                  onChange={handleBannerUpload}
                 />
               </label>
             </div>

@@ -5,10 +5,16 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cors from "cors";
 import admin from "firebase-admin";
-import serviceAccountKey from "./serviceAccountKey.json" assert { type: "json" };
+// import serviceAccountKey from "./serviceAccountKey.json";
 import { getAuth } from "firebase-admin/auth";
 import aws from "aws-sdk";
 import { nanoid } from "nanoid";
+
+import { readFile } from "fs/promises";
+
+const serviceAccountKey = JSON.parse(
+  await readFile(new URL("./serviceAccountKey.json", import.meta.url))
+);
 
 // Schema
 import User from "./Schema/User.js";
